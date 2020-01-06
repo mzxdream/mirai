@@ -64,11 +64,11 @@ internal object GroupMessageEventParserAndHandler : KnownEventParserAndHandler<G
         }
         bot.logger.debug("-----------------detail:${groupNumber} $senderName ${senderPermission.name}:$message")
         try {
-            //val group = bot.getGroup(groupNumber)
+            val group = bot.getGroup(groupNumber)
             return GroupMessage(
                 bot = bot,
                 groupNumber = groupNumber,
-                group = null,
+                group = group,
                 senderName = senderName,
                 permission = senderPermission,
                 senderId = qq,

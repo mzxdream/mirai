@@ -6,6 +6,7 @@ import net.mamoe.mirai.BotAccount
 import net.mamoe.mirai.BotImpl
 import net.mamoe.mirai.contact.*
 import net.mamoe.mirai.data.AddFriendResult
+import net.mamoe.mirai.data.GroupInfo
 import net.mamoe.mirai.data.ImageLink
 import net.mamoe.mirai.data.Packet
 import net.mamoe.mirai.message.data.Image
@@ -140,7 +141,9 @@ internal abstract class TIMPCBotBase constructor(
                 else -> assertUnreachable()
             }
         } catch (e: Exception) {
-            throw IllegalStateException("Cannot obtain group info for id ${id.value}", e)
+            //throw IllegalStateException("Cannot obtain group info for id ${id.value}", e)
+            val members = mutableMapOf<Long, MemberPermission>()
+            RawGroupInfo(id.value, id.value, "${id.value}", "${id.value}", members)
         }
 
         return groups.delegate.getOrAdd(id.value) { Group(id, info) }
