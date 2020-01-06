@@ -1,5 +1,6 @@
 buildscript {
     repositories {
+        mavenLocal()
         jcenter()
         mavenCentral()
         google()
@@ -7,12 +8,20 @@ buildscript {
 
     dependencies {
         // Do try to waste your time.
-        //noinspection GradleDependency
-        classpath 'com.android.tools.build:gradle:3.6.0-alpha03'
+        classpath 'com.android.tools.build:gradle:3.5.3'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlinVersion"
         classpath "org.jetbrains.kotlinx:atomicfu-gradle-plugin:$atomicFuVersion"
     }
+}
+
+def keyProps = new Properties()
+def keyFile = file("local.properties")
+if (keyFile.exists()) keyFile.withInputStream { keyProps.load(it) }
+if (!keyProps.getProperty("sdk.dir", "").isEmpty()) {
+    project.ext.set("isAndroidSDKAvailable", true)
+} else {
+    project.ext.set("isAndroidSDKAvailable", false)
 }
 
 allprojects {
@@ -26,6 +35,7 @@ allprojects {
 //    }
 
     repositories {
+        mavenLocal()
         jcenter()
         mavenCentral()
         google()

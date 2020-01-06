@@ -9,8 +9,15 @@ import kotlin.annotation.AnnotationTarget.*
  * 非常不建议在发行版本中使用这些 API.
  */
 @Experimental(level = Experimental.Level.ERROR)
-@Target(CLASS, TYPEALIAS, FUNCTION, PROPERTY, FIELD, CONSTRUCTOR)
-annotation class MiraiInternalAPI
+@Target(
+    CLASS, TYPEALIAS, FUNCTION, PROPERTY, FIELD, CONSTRUCTOR,
+    CLASS,
+    FUNCTION,
+    PROPERTY
+)
+annotation class MiraiInternalAPI(
+    val message: String = ""
+)
 
 /**
  * 标记这个类, 类型, 函数, 属性, 字段, 或构造器为实验性的.
@@ -31,3 +38,18 @@ annotation class MiraiExperimentalAPI(
 @Retention(AnnotationRetention.BINARY)
 @MustBeDocumented
 annotation class SinceMirai(val version: String)
+
+/**
+ * 包的最后一次修改时间, 和分析时使用的 TIM 版本
+ */
+@MustBeDocumented
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS, AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.SOURCE)
+annotation class PacketVersion(val date: String, val timVersion: String)
+
+/**
+ * 带有这个注解的 [Packet] 将不会被记录在 log 中.
+ */
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class NoLog

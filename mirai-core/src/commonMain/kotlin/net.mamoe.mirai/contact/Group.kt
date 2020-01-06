@@ -3,10 +3,8 @@
 package net.mamoe.mirai.contact
 
 import kotlinx.coroutines.CoroutineScope
-import net.mamoe.mirai.network.protocol.tim.packet.action.GroupInfo
-import net.mamoe.mirai.network.protocol.tim.packet.action.QuitGroupResponse
-import net.mamoe.mirai.utils.internal.PositiveNumbers
-import net.mamoe.mirai.utils.internal.coerceAtLeastOrFail
+import net.mamoe.mirai.data.GroupInfo
+import net.mamoe.mirai.utils.coerceAtLeastOrFail
 
 
 /**
@@ -17,7 +15,7 @@ import net.mamoe.mirai.utils.internal.coerceAtLeastOrFail
  * - Group ID([Group.internalId]) 是与调用 API 时使用的 id.(在 QQ 客户端中不可见)
  * @author Him188moe
  */
-interface Group : Contact, CoroutineScope, Iterable<Member>/*, Map<UInt, Member>*/ { // TODO: 2019/12/4 在 inline 稳定后实现 Map<UInt, Member>. 目前这样做会导致问题
+interface Group : Contact, CoroutineScope/*, Map<UInt, Member>*/ { // TODO: 2019/12/4 在 inline 稳定后实现 Map<UInt, Member>. 目前这样做会导致问题
     /**
      * 内部 ID. 内部 ID 为 [GroupId] 的映射
      */
@@ -52,7 +50,7 @@ interface Group : Contact, CoroutineScope, Iterable<Member>/*, Map<UInt, Member>
     /**
      * 获取群成员. 若此 ID 的成员不存在, 则会抛出 [kotlin.NoSuchElementException]
      */
-    fun getMember(id: UInt): Member
+    fun getMember(id: Long): Member
 
     /**
      * 更新群资料. 群资料会与服务器事件同步事件更新, 一般情况下不需要手动更新.
@@ -66,7 +64,7 @@ interface Group : Contact, CoroutineScope, Iterable<Member>/*, Map<UInt, Member>
      *
      * @see QuitGroupResponse.isSuccess 判断是否成功
      */
-    suspend fun quit(): QuitGroupResponse
+    suspend fun quit(): Boolean
 
     fun toFullString(): String = "Group(id=${this.id}, name=$name, owner=${owner.id}, members=${members.idContentString})"
 }
@@ -80,27 +78,19 @@ interface Group : Contact, CoroutineScope, Iterable<Member>/*, Map<UInt, Member>
  * @see GroupInternalId.toId 由 [GroupInternalId] 转换为 [GroupId]
  * @see GroupId.toInternalId 由 [GroupId] 转换为 [GroupInternalId]
  */
-inline class GroupId(inline val value: UInt)
-
-/**
- * 将 [this] 转为 [GroupId].
- */
-@Suppress("NOTHING_TO_INLINE")
-inline fun UInt.groupId(): GroupId = GroupId(this)
+inline class GroupId(inline val value: Long)
 
 /**
  * 将 [this] 转为 [GroupInternalId].
  */
-@Suppress("NOTHING_TO_INLINE")
-inline fun UInt.groupInternalId(): GroupInternalId = GroupInternalId(this)
+fun Long.groupInternalId(): GroupInternalId = GroupInternalId(this)
 
 /**
  * 将无符号整数格式的 [Long] 转为 [GroupId].
  *
  * 注: 在 Java 中常用 [Long] 来表示 [UInt]
  */
-fun @receiver:PositiveNumbers Long.groupId(): GroupId =
-    GroupId(this.coerceAtLeastOrFail(0).toUInt())
+fun Long.groupId(): GroupId = GroupId(this.coerceAtLeastOrFail(0))
 
 /**
  * 一些群 API 使用的 ID. 在使用时会特别注明
@@ -110,4 +100,4 @@ fun @receiver:PositiveNumbers Long.groupId(): GroupId =
  * @see GroupInternalId.toId 由 [GroupInternalId] 转换为 [GroupId]
  * @see GroupId.toInternalId 由 [GroupId] 转换为 [GroupInternalId]
  */
-inline class GroupInternalId(inline val value: UInt)
+inline class GroupInternalId(inline val value: Long)

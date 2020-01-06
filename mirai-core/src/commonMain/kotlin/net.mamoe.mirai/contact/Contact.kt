@@ -2,14 +2,11 @@
 
 package net.mamoe.mirai.contact
 
+import kotlinx.coroutines.CoroutineScope
 import net.mamoe.mirai.Bot
-import net.mamoe.mirai.message.Message
-import net.mamoe.mirai.message.MessageChain
-import net.mamoe.mirai.message.chain
-import net.mamoe.mirai.message.singleChain
-import net.mamoe.mirai.network.BotSession
-import net.mamoe.mirai.utils.MiraiInternalAPI
-import net.mamoe.mirai.withSession
+import net.mamoe.mirai.message.data.*
+import net.mamoe.mirai.utils.ExternalImage
+import net.mamoe.mirai.utils.WeakRefProperty
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -20,16 +17,17 @@ import kotlin.contracts.contract
  *
  * @author Him188moe
  */
-interface Contact {
+interface Contact : CoroutineScope {
     /**
      * 这个联系人所属 [Bot]
      */
-    val bot: Bot
+    @WeakRefProperty
+    val bot: Bot // weak ref
 
     /**
      * 可以是 QQ 号码或者群号码 [GroupId].
      */
-    val id: UInt
+    val id: Long
 
     /**
      * 向这个对象发送消息.
@@ -37,6 +35,8 @@ interface Contact {
      * 速度太快会被服务器屏蔽(无响应). 在测试中不延迟地发送 6 条消息就会被屏蔽之后的数据包 1 秒左右.
      */
     suspend fun sendMessage(message: MessageChain)
+
+    suspend fun uploadImage(image: ExternalImage): ImageId
 }
 
 suspend inline fun Contact.sendMessage(message: Message) = sendMessage(message.chain())
@@ -44,65 +44,13 @@ suspend inline fun Contact.sendMessage(message: Message) = sendMessage(message.c
 suspend inline fun Contact.sendMessage(plain: String) = sendMessage(plain.singleChain())
 
 /**
- * 以 [BotSession] 作为接收器 (receiver) 并调用 [block], 返回 [block] 的返回值.
- * 这个方法将能帮助使用在 [BotSession] 中定义的一些扩展方法, 如 [BotSession.sendAndExpectAsync]
+ * 以 [Bot] 作为接收器 (receiver) 并调用 [block], 返回 [block] 的返回值.
+ * 这个方法将能帮助使用在 [Bot] 中定义的一些扩展方法
  */
 @UseExperimental(ExperimentalContracts::class)
-inline fun <R> Contact.withSession(block: BotSession.() -> R): R {
+inline fun <R> Contact.withBot(block: Bot.() -> R): R {
     contract {
         callsInPlace(block, InvocationKind.EXACTLY_ONCE)
     }
-    return bot.withSession(block)
-}
-
-/**
- * 只读联系人列表
- */
-@UseExperimental(MiraiInternalAPI::class)
-inline class ContactList<C : Contact>(internal val mutable: MutableContactList<C>) : Map<UInt, C> {
-    /**
-     * ID 列表的字符串表示.
-     * 如:
-     * ```
-     * [123456, 321654, 123654]
-     * ```
-     */
-    val idContentString: String get() = this.keys.joinToString(prefix = "[", postfix = "]") { it.toLong().toString() }
-
-    override fun toString(): String = mutable.toString()
-
-
-    // TODO: 2019/12/2 应该使用属性代理, 但属性代理会导致 UInt 内联错误. 等待 kotlin 修复后替换
-
-    override val size: Int get() = mutable.size
-    override fun containsKey(key: UInt): Boolean = mutable.containsKey(key)
-    override fun containsValue(value: C): Boolean = mutable.containsValue(value)
-    override fun get(key: UInt): C? = mutable[key]
-    override fun isEmpty(): Boolean = mutable.isEmpty()
-    override val entries: MutableSet<MutableMap.MutableEntry<UInt, C>> get() = mutable.entries
-    override val keys: MutableSet<UInt> get() = mutable.keys
-    override val values: MutableCollection<C> get() = mutable.values
-}
-
-/**
- * 可修改联系人列表. 只会在内部使用.
- */
-@MiraiInternalAPI
-inline class MutableContactList<C : Contact>(private val delegate: MutableMap<UInt, C> = linkedMapOf()) : MutableMap<UInt, C> {
-    override fun toString(): String = asIterable().joinToString(separator = ", ", prefix = "ContactList(", postfix = ")") { it.value.toString() }
-
-    // TODO: 2019/12/2 应该使用属性代理, 但属性代理会导致 UInt 内联错误. 等待 kotlin 修复后替换
-
-    override val size: Int get() = delegate.size
-    override fun containsKey(key: UInt): Boolean = delegate.containsKey(key)
-    override fun containsValue(value: C): Boolean = delegate.containsValue(value)
-    override fun get(key: UInt): C? = delegate[key]
-    override fun isEmpty(): Boolean = delegate.isEmpty()
-    override val entries: MutableSet<MutableMap.MutableEntry<UInt, C>> get() = delegate.entries
-    override val keys: MutableSet<UInt> get() = delegate.keys
-    override val values: MutableCollection<C> get() = delegate.values
-    override fun clear() = delegate.clear()
-    override fun put(key: UInt, value: C): C? = delegate.put(key, value)
-    override fun putAll(from: Map<out UInt, C>) = delegate.putAll(from)
-    override fun remove(key: UInt): C? = delegate.remove(key)
+    return bot.run(block)
 }

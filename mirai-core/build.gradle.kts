@@ -1,8 +1,8 @@
 @file:Suppress("UNUSED_VARIABLE")
 
 plugins {
-    id("kotlinx-atomicfu")
     kotlin("multiplatform")
+    id("kotlinx-atomicfu")
     id("com.android.library")
     id("kotlinx-serialization")
     `maven-publish`
@@ -29,22 +29,34 @@ fun ktor(id: String, version: String) = "io.ktor:ktor-$id:$version"
 
 description = "QQ protocol library"
 
+val isAndroidSDKAvailable: Boolean by project
+
+android {
+    compileSdkVersion(29)
+    defaultConfig {
+        minSdkVersion(15)
+    }
+}
+
 kotlin {
-    android("android") {
-        publishAllLibraryVariants()
-        project.android {
-            compileSdkVersion(29)
-
-            defaultConfig {
-                minSdkVersion(15)
-            }
-
-            // sourceSets.filterIsInstance(com.android.build.gradle.api.AndroidSourceSet::class.java).forEach {
-            //     it.manifest.srcFile("src/androidMain/res/AndroidManifest.xml")
-            //     it.res.srcDirs(file("src/androidMain/res"))
-            // }
-            //(sourceSets["main"] as AndroidSourceSet).java.srcDirs(file("src/androidMain/kotlin"))
+    if (isAndroidSDKAvailable) {
+        project.apply(plugin = "com.android.library")
+        android("android") {
+            publishAllLibraryVariants()
         }
+    } else {
+        println(
+            """Android SDK 可能未安装.
+                $name 的 Android 目标编译将不会进行. 
+                这不会影响 Android 以外的平台的编译.
+            """.trimIndent()
+        )
+        println(
+            """Android SDK might not be installed.
+                Android target of $name will not be compiled. 
+                It does no influence on the compilation of other platforms.
+            """.trimIndent()
+        )
     }
 
     jvm("jvm") {
@@ -72,8 +84,6 @@ kotlin {
                 api(kotlinx("coroutines-core-common", coroutinesVersion))
                 api(kotlinx("serialization-runtime-common", serializationVersion))
 
-                api("com.soywiz.korlibs.klock:klock:$klockVersion")
-
                 api(ktor("http-cio", ktorVersion))
                 api(ktor("http", ktorVersion))
                 api(ktor("client-core-jvm", ktorVersion))
@@ -81,24 +91,38 @@ kotlin {
                 api(ktor("client-core", ktorVersion))
                 api(ktor("network", ktorVersion))
                 //implementation("io.ktor:ktor-io:1.3.0-beta-1")
+
+                runtimeOnly(files("build/classes/kotlin/metadata/main")) // classpath is not properly set by IDE
             }
         }
         commonTest {
             dependencies {
                 api(kotlin("test-annotations-common"))
                 api(kotlin("test-common"))
+
+                runtimeOnly(files("build/classes/kotlin/metadata/test")) // classpath is not properly set by IDE
             }
-            kotlin.setSrcDirs(listOf("src/$name/kotlin"))
         }
 
-        val androidMain by getting {
-            dependencies {
-                api(kotlin("reflect", kotlinVersion))
+        if (isAndroidSDKAvailable) {
+            val androidMain by getting {
+                dependencies {
+                    api(kotlin("reflect", kotlinVersion))
 
-                api(kotlinx("serialization-runtime", serializationVersion))
-                api(kotlinx("coroutines-android", coroutinesVersion))
+                    api(kotlinx("serialization-runtime", serializationVersion))
+                    api(kotlinx("coroutines-android", coroutinesVersion))
 
-                api(ktor("client-android", ktorVersion))
+                    api(ktor("client-android", ktorVersion))
+                }
+            }
+
+            val androidTest by getting {
+                dependencies {
+                    api(kotlin("test", kotlinVersion))
+                    api(kotlin("test-junit", kotlinVersion))
+                    api(kotlin("test-annotations-common"))
+                    api(kotlin("test-common"))
+                }
             }
         }
 
@@ -111,18 +135,19 @@ kotlin {
                 api(ktor("client-core-jvm", ktorVersion))
                 api(kotlinx("io-jvm", kotlinXIoVersion))
                 api(kotlinx("serialization-runtime", serializationVersion))
+
+                runtimeOnly(files("build/classes/kotlin/jvm/main")) // classpath is not properly set by IDE
             }
         }
 
         val jvmTest by getting {
             dependencies {
                 api(kotlin("test", kotlinVersion))
-                api(kotlin("test-annotations-common", kotlinVersion))
-                api(kotlin("test-junit5", kotlinVersion))
-                api("org.junit.jupiter:junit-jupiter-api:5.5.2")
+                api(kotlin("test-junit", kotlinVersion))
+                implementation("org.pcap4j:pcap4j-distribution:1.8.2")
+
+                runtimeOnly(files("build/classes/kotlin/jvm/test")) // classpath is not properly set by IDE
             }
-            kotlin.outputDir = file("build/classes/kotlin/jvm/test")
-            kotlin.setSrcDirs(listOf("src/$name/kotlin"))
         }
     }
 }

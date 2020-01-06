@@ -2,8 +2,6 @@
 
 package demo.gentleman
 
-import com.soywiz.klock.months
-import com.soywiz.klock.seconds
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -11,18 +9,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.BotAccount
-import net.mamoe.mirai.addFriend
 import net.mamoe.mirai.alsoLogin
 import net.mamoe.mirai.contact.MemberPermission
-import net.mamoe.mirai.contact.mute
 import net.mamoe.mirai.event.Subscribable
+import net.mamoe.mirai.event.events.ReceiveFriendAddRequestEvent
 import net.mamoe.mirai.event.subscribeAlways
 import net.mamoe.mirai.event.subscribeGroupMessages
 import net.mamoe.mirai.event.subscribeMessages
-import net.mamoe.mirai.message.*
-import net.mamoe.mirai.network.protocol.tim.packet.event.FriendMessage
-import net.mamoe.mirai.network.protocol.tim.packet.event.GroupMessage
-import net.mamoe.mirai.network.protocol.tim.packet.event.ReceiveFriendAddRequestEvent
+import net.mamoe.mirai.message.FriendMessage
+import net.mamoe.mirai.message.GroupMessage
+import net.mamoe.mirai.message.data.At
+import net.mamoe.mirai.message.data.Image
+import net.mamoe.mirai.message.data.buildXMLMessage
+import net.mamoe.mirai.message.data.getValue
+import net.mamoe.mirai.message.sendAsImageTo
 import java.io.File
 import java.util.*
 import javax.swing.filechooser.FileSystemView
@@ -36,8 +36,8 @@ private fun readTestAccount(): BotAccount? {
 
     val lines = file.readLines()
     return try {
-        BotAccount(lines[0].toUInt(), lines[1])
-    } catch (e: Exception) {
+        BotAccount(lines[0].toLong(), lines[1])
+    } catch (e: Throwable) {
         null
     }
 }
@@ -46,36 +46,32 @@ private fun readTestAccount(): BotAccount? {
 suspend fun main() {
     val bot = Bot(
         readTestAccount() ?: BotAccount(
-            id = 913366033u,
-            password = "a18260132383"
+            id = 913366033,
+            passwordPlainText = "a18260132383"
         )
-    ).alsoLogin()
+    ) {
+        // override config here.
+    }.alsoLogin()
 
-    /**
-     * 监听所有事件
-     */
-    subscribeAlways<Subscribable> {
-
-        //bot.logger.verbose("收到了一个事件: ${it::class.simpleName}")
+    // 任何可以监听的对象都继承 Subscribable, 因此这个订阅会订阅全部的事件.
+    GlobalScope.subscribeAlways<Subscribable> {
+        //bot.logger.verbose("收到了一个事件: $this")
     }
 
-    subscribeAlways<ReceiveFriendAddRequestEvent> {
+    // 全局范围订阅事件, 不受 bot 实例影响
+    GlobalScope.subscribeAlways<ReceiveFriendAddRequestEvent> {
         it.approve()
     }
 
+    // 订阅来自这个 bot 的群消息事件
     bot.subscribeGroupMessages {
         "群资料" reply {
             group.updateGroupInfo().toString().reply()
         }
 
-        startsWith("mt2months") {
-            val at: At by message
-            at.member().mute(1.months)
-        }
-
         startsWith("mute") {
             val at: At by message
-            at.member().mute(30.seconds)
+            at.member().mute(30)
         }
 
         startsWith("unmute") {
@@ -84,18 +80,29 @@ suspend fun main() {
         }
     }
 
+    // 订阅来自这个 bot 的消息事件, 可以是群消息也可以是好友消息
     bot.subscribeMessages {
+        always {
+        }
+
         case("at me") { At(sender).reply() }
+        // 等同于  "at me" reply { At(sender) }
 
         "你好" reply "你好!"
 
         startsWith("profile", removePrefix = true) {
             val account = it.trim()
             if (account.isNotEmpty()) {
-                account.toUInt().qq()
+                account.toLong().qq()
             } else {
                 sender
             }.queryProfile().toString().reply()
+        }
+        "grouplist" reply {
+
+            //"https://ssl.ptlogin2.qq.com/jump?pt_clientver=5509&pt_src=1&keyindex=9&clientuin=" + bot.qqAccount + "&clientkey=" + com.tick_tock.pctim.utils.Util.byte2HexString(
+            //    user.txprotocol.serviceTicketHttp
+            //).replace(" ", "").toString() + "&u1=http%3A%2F%2Fqun.qq.com%2Fmember.html%23gid%3D168209441"
         }
 
         "xml" reply {
@@ -168,7 +175,7 @@ suspend fun main() {
         }
 
         startsWith("添加好友", removePrefix = true) {
-            reply(bot.addFriend(it.toUInt()).toString())
+            reply(bot.addFriend(it.toLong()).toString())
         }
 
     }

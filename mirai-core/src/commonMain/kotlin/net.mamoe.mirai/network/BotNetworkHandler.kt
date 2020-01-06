@@ -1,17 +1,11 @@
+@file:Suppress("EXPERIMENTAL_API_USAGE")
+
 package net.mamoe.mirai.network
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableJob
 import kotlinx.coroutines.CoroutineScope
 import net.mamoe.mirai.Bot
-import net.mamoe.mirai.network.protocol.tim.handler.DataPacketSocketAdapter
-import net.mamoe.mirai.network.protocol.tim.handler.TemporaryPacketHandler
-import net.mamoe.mirai.network.protocol.tim.packet.OutgoingPacket
-import net.mamoe.mirai.network.protocol.tim.packet.Packet
-import net.mamoe.mirai.network.protocol.tim.packet.login.HeartbeatPacket
-import net.mamoe.mirai.network.protocol.tim.packet.login.LoginResult
-import net.mamoe.mirai.network.protocol.tim.packet.login.RequestSKeyPacket
-import net.mamoe.mirai.utils.MiraiInternalAPI
 import net.mamoe.mirai.utils.io.PlatformDatagramChannel
 
 /**
@@ -28,48 +22,46 @@ import net.mamoe.mirai.utils.io.PlatformDatagramChannel
  * - SKey 刷新 [RequestSKeyPacket]
  * - 所有数据包处理和发送
  *
- * [BotNetworkHandler.close] 时将会 [取消][kotlin.coroutines.CoroutineContext.cancelChildren] 所有此作用域下的协程
+ * [BotNetworkHandler.dispose] 时将会 [取消][kotlin.coroutines.CoroutineContext.cancelChildren] 所有此作用域下的协程
  *
  * A BotNetworkHandler is used to connect with Tencent servers.
  */
 @Suppress("PropertyName")
-interface BotNetworkHandler<Socket : DataPacketSocketAdapter> : CoroutineScope {
-    val socket: Socket
-    val bot: Bot
+abstract class BotNetworkHandler : CoroutineScope {
+    abstract val bot: Bot
 
-    val supervisor: CompletableJob
-
-    val session: BotSession
+    abstract val supervisor: CompletableJob
 
     /**
      * 依次尝试登录到可用的服务器. 在任一服务器登录完成后返回登录结果
      * 本函数将挂起直到登录成功.
      */
-    suspend fun login(): LoginResult
-
-    /**
-     * 添加一个临时包处理器, 并发送相应的包
-     *
-     * @see [BotSession.sendAndExpectAsync] 发送并期待一个包
-     * @see [TemporaryPacketHandler] 临时包处理器
-     */
-    @MiraiInternalAPI
-    suspend fun addHandler(temporaryPacketHandler: TemporaryPacketHandler<*, *>)
-
-    /**
-     * 发送数据包
-     */
-    suspend fun sendPacket(packet: OutgoingPacket)
+    abstract suspend fun login()
 
     /**
      * 等待直到与服务器断开连接. 若未连接则立即返回
      */
-    suspend fun awaitDisconnection()
+    abstract suspend fun awaitDisconnection()
 
     /**
      * 关闭网络接口, 停止所有有关协程和任务
      */
-    fun close(cause: Throwable? = null) {
+    open fun dispose(cause: Throwable? = null) {
         supervisor.cancel(CancellationException("handler closed", cause))
     }
+
+/*
+    @PublishedApi
+    internal abstract fun CoroutineScope.QQ(bot: Bot, id: Long, coroutineContext: CoroutineContext): QQ
+
+    @PublishedApi
+    internal abstract fun CoroutineScope.Group(bot: Bot, groupId: GroupId, info: RawGroupInfo, context: CoroutineContext): Group
+
+    @PublishedApi
+    internal abstract fun Group.Member(delegate: QQ, permission: MemberPermission, coroutineContext: CoroutineContext): Member
+
+
+ */
+
+
 }

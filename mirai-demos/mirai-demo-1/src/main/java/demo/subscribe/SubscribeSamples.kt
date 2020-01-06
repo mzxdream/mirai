@@ -10,10 +10,14 @@ import net.mamoe.mirai.alsoLogin
 import net.mamoe.mirai.contact.QQ
 import net.mamoe.mirai.contact.sendMessage
 import net.mamoe.mirai.event.*
-import net.mamoe.mirai.message.*
-import net.mamoe.mirai.network.protocol.tim.packet.action.uploadImage
-import net.mamoe.mirai.network.protocol.tim.packet.event.FriendMessage
-import net.mamoe.mirai.network.protocol.tim.packet.event.GroupMessage
+import net.mamoe.mirai.message.FriendMessage
+import net.mamoe.mirai.message.GroupMessage
+import net.mamoe.mirai.message.data.Image
+import net.mamoe.mirai.message.data.ImageId
+import net.mamoe.mirai.message.data.PlainText
+import net.mamoe.mirai.message.data.firstOrNull
+import net.mamoe.mirai.message.sendAsImageTo
+import net.mamoe.mirai.timpc.TIMPC
 import net.mamoe.mirai.utils.suspendToExternalImage
 import java.io.File
 
@@ -23,9 +27,10 @@ private fun readTestAccount(): BotAccount? {
         return null
     }
 
+    println("Reading account from testAccount.text")
     val lines = file.readLines()
     return try {
-        BotAccount(lines[0].toUInt(), lines[1])
+        BotAccount(lines[0].toLong(), lines[1])
     } catch (e: IndexOutOfBoundsException) {
         null
     }
@@ -33,29 +38,18 @@ private fun readTestAccount(): BotAccount? {
 
 @Suppress("UNUSED_VARIABLE")
 suspend fun main() {
-    val bot = Bot(
+    val bot = TIMPC.Bot( // JVM 下也可以不写 `TIMPC.` 引用顶层函数
         readTestAccount() ?: BotAccount(//填写你的账号
-            id = 1994701121u,
-            password = "123456"
+            id = 1994701121,
+            passwordPlainText = "123456"
         )
-    ).alsoLogin {
+    ) {
         // 覆盖默认的配置
         randomDeviceName = false
-    }
+    }.alsoLogin()
 
     bot.messageDSL()
     directlySubscribe(bot)
-
-    //DSL 监听
-    subscribeAll<FriendMessage> {
-        always {
-            //获取第一个纯文本消息
-            val firstText = it.message.firstOrNull<PlainText>()
-
-        }
-    }
-
-    demo2()
 
     bot.network.awaitDisconnection()//等到直到断开连接
 }
@@ -78,7 +72,7 @@ suspend fun Bot.messageDSL() {
         // 当消息 == "查看 subject" 时, 执行 lambda
         case("查看 subject") {
             if (subject is QQ) {
-                reply("消息主体为 QQ, 你在跟发私聊消息")
+                reply("消息主体为 QQ, 你在发私聊消息")
             } else {
                 reply("消息主体为 Group, 你在群里发消息")
             }
@@ -110,6 +104,9 @@ suspend fun Bot.messageDSL() {
             reply(message)
         }
 
+        "hello.*world".toRegex() matchingReply {
+            "Hello!"
+        }
 
         "123" containsReply "你的消息里面包含 123"
 
@@ -191,77 +188,63 @@ suspend fun Bot.messageDSL() {
  */
 @Suppress("UNUSED_VARIABLE")
 suspend fun directlySubscribe(bot: Bot) {
+    // 在当前协程作用域 (CoroutineScope) 下创建一个子 Job, 监听一个事件.
+    //
     // 手动处理消息
     // 使用 Bot 的扩展方法监听, 将在处理事件时得到一个 this: Bot.
     // 这样可以调用 Bot 内的一些扩展方法如 UInt.qq():QQ
+    //
+    // 这个函数返回 Listener, Listener 是一个 CompletableJob. 如果不手动 close 它, 它会一直阻止当前 CoroutineScope 结束.
+    // 例如:
+    // ```kotlin
+    // runBlocking {// this: CoroutineScope
+    //     bot.subscribeAlways<FriendMessage> {
+    //     }
+    // }
+    // ```
+    // 则这个 `runBlocking` 永远不会结束, 因为 `subscribeAlways` 在 `runBlocking` 的 `CoroutineScope` 下创建了一个 Job.
+    // 正确的用法为:
     bot.subscribeAlways<FriendMessage> {
-        // this: Bot
-        // it: FriendMessageEvent
+        // this: FriendMessageEvent
+        // event: FriendMessageEvent
 
         // 获取第一个纯文本消息, 获取不到会抛出 NoSuchElementException
-        // val firstText = it.message.first<PlainText>()
+        // val firstText = message.first<PlainText>()
 
-        val firstText = it.message.firstOrNull<PlainText>()
+        val firstText = message.firstOrNull<PlainText>()
 
         // 获取第一个图片
-        val firstImage = it.message.firstOrNull<Image>()
+        val firstImage = message.firstOrNull<Image>()
 
         when {
-            it.message eq "你好" -> it.reply("你好!")
+            message eq "你好" -> reply("你好!")
 
-            "复读" in it.message -> it.sender.sendMessage(it.message)
+            "复读" in message -> sender.sendMessage(message)
 
-            "发群消息" in it.message -> 580266363u.group().sendMessage(it.message.toString().substringAfter("发群消息"))
+            "发群消息" in message -> 580266363.group().sendMessage(message.toString().substringAfter("发群消息"))
 
-            "上传群图片" in it.message -> withTimeoutOrNull(5000) {
-                val filename = it.message.toString().substringAfter("上传群图片")
+            "上传群图片" in message -> withTimeoutOrNull(5000) {
+                val filename = message.toString().substringAfter("上传群图片")
                 val image = File(
                     "C:\\Users\\Him18\\Desktop\\$filename"
                 ).suspendToExternalImage()
-                920503456u.group().uploadImage(image)
-                it.reply(image.groupImageId.value)
+                920503456.group().uploadImage(image)
+                reply(image.groupImageId.value)
                 delay(100)
-                920503456u.group().sendMessage(Image(image.groupImageId))
+                920503456.group().sendMessage(Image(image.groupImageId))
             }
 
-            "发群图片" in it.message -> {
-                920503456u.group().sendMessage(Image(ImageId(it.message.toString().substringAfter("发群图片"))))
+            "发群图片" in message -> {
+                920503456.group().sendMessage(Image(ImageId(message.toString().substringAfter("发群图片"))))
             }
 
-            "发好友图片" in it.message -> {
-                it.reply(Image(ImageId(it.message.toString().substringAfter("发好友图片"))))
+            "发好友图片" in message -> {
+                reply(Image(ImageId(message.toString().substringAfter("发好友图片"))))
             }
 
-            /*it.event eq "发图片群" -> sendGroupMessage(Group(session.bot, 580266363), PlainText("test") + UnsolvedImage(File("C:\\Users\\Him18\\Desktop\\faceImage_1559564477775.jpg")).also { image ->
-                    image.upload(session, Group(session.bot, 580266363)).of()
-                })*/
+            message eq "发图片群2" -> 580266363.group().sendMessage(Image(ImageId("{7AA4B3AA-8C3C-0F45-2D9B-7F302A0ACEAA}.jpg")))
 
-            it.message eq "发图片群2" -> 580266363u.group().sendMessage(Image(ImageId("{7AA4B3AA-8C3C-0F45-2D9B-7F302A0ACEAA}.jpg")))
-
-            /* it.event eq "发图片" -> sendFriendMessage(it.sentBy, PlainText("test") + UnsolvedImage(File("C:\\Users\\Him18\\Desktop\\faceImage_1559564477775.jpg")).also { image ->
-                     image.upload(session, it.sentBy).of()
-                 })*/
-            it.message eq "发图片2" -> it.reply(PlainText("test") + Image(ImageId("{7AA4B3AA-8C3C-0F45-2D9B-7F302A0ACEAA}.jpg")))
-            else -> {
-
-            }
-        }
-    }
-}
-
-/**
- * 实现功能:
- * 对机器人说 "记笔记", 机器人记录之后的所有消息.
- * 对机器人说 "停止", 机器人停止
- */
-suspend fun demo2() {
-    subscribeAlways<FriendMessage> { event ->
-        if (event.message eq "记笔记") {
-            subscribeUntilFalse<FriendMessage> {
-                it.reply("你发送了 ${it.message}")
-
-                it.message eq "停止"
-            }
+            message eq "发图片2" -> reply(PlainText("test") + Image(ImageId("{7AA4B3AA-8C3C-0F45-2D9B-7F302A0ACEAA}.jpg")))
         }
     }
 }

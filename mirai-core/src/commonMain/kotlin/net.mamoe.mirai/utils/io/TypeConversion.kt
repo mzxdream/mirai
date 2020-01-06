@@ -3,7 +3,6 @@
 package net.mamoe.mirai.utils.io
 
 import kotlinx.io.core.IoBuffer
-import kotlinx.io.core.writeFully
 import kotlinx.io.pool.ObjectPool
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -17,6 +16,20 @@ import kotlin.random.nextInt
  * 255 -> 00 00 00 FF
  */
 fun Int.toByteArray(): ByteArray = byteArrayOf(
+    (shr(24) and 0xFF).toByte(),
+    (shr(16) and 0xFF).toByte(),
+    (shr(8) and 0xFF).toByte(),
+    (shr(0) and 0xFF).toByte()
+)
+
+/**
+ * 255 -> 00 00 00 FF
+ */
+fun Long.toByteArray(): ByteArray = byteArrayOf(
+    (shr(56) and 0xFF).toByte(),
+    (shr(48) and 0xFF).toByte(),
+    (shr(40) and 0xFF).toByte(),
+    (shr(32) and 0xFF).toByte(),
     (shr(24) and 0xFF).toByte(),
     (shr(16) and 0xFF).toByte(),
     (shr(8) and 0xFF).toByte(),
@@ -82,31 +95,40 @@ fun Byte.fixToUHex(): String = this.toUByte().fixToUHex()
 /**
  * 转无符号十六进制表示, 并补充首位 `0`.
  */
-fun UByte.fixToUHex(): String = if (this.toInt() in 0..9) "0${this.toString(16).toUpperCase()}" else this.toString(16).toUpperCase()
+fun UByte.fixToUHex(): String = if (this.toInt() in 0..15) "0${this.toString(16).toUpperCase()}" else this.toString(16).toUpperCase()
 
 /**
  * 将无符号 Hex 转为 [ByteArray], 有根据 hex 的 [hashCode] 建立的缓存.
  */
 fun String.hexToBytes(): ByteArray =
     this.split(" ")
+        .asSequence()
         .filterNot { it.isEmpty() }
         .map { s -> s.toUByte(16).toByte() }
+        .toList()
         .toByteArray()
+
+/**
+ * 每 2 char 为一组, 转换 Hex 为 [ByteArray]
+ */
+fun String.chunkedHexToBytes(): ByteArray =
+    this.asSequence().chunked(2).map { (it[0].toString() + it[1]).toUByte(16).toByte() }.toList().toByteArray()
 
 /**
  * 将无符号 Hex 转为 [UByteArray], 有根据 hex 的 [hashCode] 建立的缓存.
  */
 fun String.hexToUBytes(): UByteArray =
     this.split(" ")
+        .asSequence()
         .filterNot { it.isEmpty() }
         .map { s -> s.toUByte(16) }
+        .toList()
         .toUByteArray()
 
 /**
  * 生成长度为 [length], 元素为随机 `0..255` 的 [ByteArray]
  */
-@PublishedApi
-internal fun getRandomByteArray(length: Int): ByteArray = ByteArray(length) { Random.nextInt(0..255).toByte() }
+fun getRandomByteArray(length: Int): ByteArray = ByteArray(length) { Random.nextInt(0..255).toByte() }
 
 /**
  * 随机生成长度为 [length] 的 [String].
@@ -142,4 +164,4 @@ fun ByteArray.toUShort(): UShort =
  * 从 [IoBuffer.Pool] [borrow][ObjectPool.borrow] 一个 [IoBuffer] 然后将 [this] 写入.
  * 注意回收 ([ObjectPool.recycle])
  */
-fun ByteArray.toIoBuffer(): IoBuffer = IoBuffer.Pool.borrow().let { it.writeFully(this); it }
+fun ByteArray.toIoBuffer(offset: Int = 0, length: Int = this.size - offset): IoBuffer = IoBuffer.Pool.borrow().let { it.writeFully(this, offset, length); it }

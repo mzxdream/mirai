@@ -1,9 +1,14 @@
-@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS")
+@file:Suppress("EXPERIMENTAL_API_USAGE", "EXPERIMENTAL_UNSIGNED_LITERALS", "NOTHING_TO_INLINE")
 
 package net.mamoe.mirai.utils.io
 
+import kotlinx.io.OutputStream
 import kotlinx.io.core.*
 import kotlinx.io.pool.useInstance
+import net.mamoe.mirai.contact.GroupId
+import net.mamoe.mirai.contact.GroupInternalId
+import net.mamoe.mirai.contact.groupId
+import net.mamoe.mirai.contact.groupInternalId
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmSynthetic
 
@@ -20,6 +25,14 @@ inline fun Input.discardExact(n: UByte) = this.discardExact(n.toInt())
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun Input.discardExact(n: Byte) = this.discardExact(n.toInt())
+
+fun ByteReadPacket.transferTo(outputStream: OutputStream) {
+    ByteArrayPool.useInstance {
+        while (this.isNotEmpty) {
+            outputStream.write(it, 0, this.readAvailable(it))
+        }
+    }
+}
 
 fun ByteReadPacket.readRemainingBytes(
     n: Int = remaining.toInt()//not that safe but adequate
@@ -41,6 +54,11 @@ fun Input.readIP(): String = buildString(4 + 3) {
 
 fun Input.readPacket(length: Int): ByteReadPacket = this.readBytes(length).toReadPacket()
 
+fun Input.readQQ(): Long = this.readUInt().toLong()
+fun Input.readGroup(): Long = this.readUInt().toLong()
+fun Input.readGroupId(): GroupId = this.readUInt().toLong().groupId()
+fun Input.readGroupInternalId(): GroupInternalId = this.readUInt().toLong().groupInternalId()
+
 fun Input.readUVarIntLVString(): String = String(this.readUVarIntByteArray())
 
 fun Input.readUByteLVString(): String = String(this.readUByteLVByteArray())
@@ -53,7 +71,7 @@ fun Input.readUByteLVByteArray(): ByteArray = this.readBytes(this.readUByte().to
 
 fun Input.readUShortLVByteArray(): ByteArray = this.readBytes(this.readUShort().toInt())
 
-internal inline fun <R> inline(block: () -> R): R = block()
+private inline fun <R> inline(block: () -> R): R = block()
 
 @Suppress("DuplicatedCode")
 fun Input.readTLVMap(expectingEOF: Boolean = false, tagSize: Int = 1): MutableMap<UInt, ByteArray> {
@@ -67,7 +85,7 @@ fun Input.readTLVMap(expectingEOF: Boolean = false, tagSize: Int = 1): MutableMa
                     2 -> readUShort()
                     else -> error("Unsupported tag size: $tagSize")
                 }
-            } catch (e: EOFException) {
+            } catch (e: Exception) { // java.nio.BufferUnderflowException is not a EOFException...
                 if (expectingEOF) {
                     return map
                 }
@@ -79,7 +97,7 @@ fun Input.readTLVMap(expectingEOF: Boolean = false, tagSize: Int = 1): MutableMa
         check(!map.containsKey(type.toUInt())) {
             "Count not readTLVMap: duplicated key 0x${type.toUInt().toUHexString("")}. " +
                     "map=$map" +
-                    ", duplicating value=${this.readUShortLVByteArray()}" +
+                    ", duplicating value=${this.readUShortLVByteArray().toUHexString()}" +
                     ", remaining=" + if (expectingEOF) this.readBytes().toUHexString() else "[Not expecting EOF]"
         }
         try {
@@ -95,7 +113,7 @@ fun Input.readTLVMap(expectingEOF: Boolean = false, tagSize: Int = 1): MutableMa
 }
 
 /**
- * 读扁平的 tag-UVarInt map. 重复的 tag 将不会只保留最后一个
+ * 读扁平的 tag-UVarInt map. 重复的 tag 将只保留最后一个
  *
  * tag: UByte
  * value: UVarint
@@ -140,10 +158,8 @@ fun Map<UInt, ByteArray>.printTLVMap(name: String = "", keyLength: Int = 1) =
         }
     })
 
-@Suppress("NOTHING_TO_INLINE")
 internal inline fun unsupported(message: String? = null): Nothing = error(message ?: "Unsupported")
 
-@Suppress("NOTHING_TO_INLINE")
 internal inline fun illegalArgument(message: String? = null): Nothing = error(message ?: "Illegal argument passed")
 
 @JvmName("printTLVStringMap")

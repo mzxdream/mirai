@@ -28,11 +28,10 @@ actual var DefaultCaptchaSolver: CaptchaSolver = {
         val tempFile: File = createTempFile(suffix = ".png").apply { deleteOnExit() }
         withContext(Dispatchers.IO) {
             tempFile.createNewFile()
-            @Suppress("EXPERIMENTAL_API_USAGE")
             MiraiLogger.info("需要验证码登录, 验证码为 4 字母")
             try {
                 tempFile.writeChannel().use { writeFully(it) }
-                MiraiLogger.info("若看不清字符图片, 请查看 ${tempFile.absolutePath}")
+                MiraiLogger.info("将会显示字符图片. 若看不清字符图片, 请查看文件 ${tempFile.absolutePath}")
             } catch (e: Exception) {
                 MiraiLogger.info("无法写出验证码文件(${e.message}), 请尝试查看以上字符图片")
             }
@@ -46,7 +45,7 @@ actual var DefaultCaptchaSolver: CaptchaSolver = {
                 }
             }
         }
-        MiraiLogger.info("若要更换验证码, 请直接回车")
+        MiraiLogger.info("请输入 4 位字母验证码. 若要更换验证码, 请直接回车")
         readLine()?.takeUnless { it.isEmpty() || it.length != 4 }
     }
 }
@@ -55,6 +54,7 @@ actual var DefaultCaptchaSolver: CaptchaSolver = {
 private fun File.writeChannel(
     coroutineContext: CoroutineContext = Dispatchers.IO
 ): ByteWriteChannel = GlobalScope.reader(CoroutineName("file-writer") + coroutineContext, autoFlush = true) {
+    @Suppress("BlockingMethodInNonBlockingContext")
     RandomAccessFile(this@writeChannel, "rw").use { file ->
         val copied = channel.copyTo(file.channel)
         file.setLength(copied) // truncate tail that could remain from the previously written data
