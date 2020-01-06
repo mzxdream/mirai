@@ -82,7 +82,7 @@ class MiraiService : Service() {
                         sId = sender!!.id
                         sName = bot.getQQ(sId).queryProfile().nickname
                     }
-                    mCallback?.get()?.onMessage("[$date]到来自${sName}(${sId})的消息:${message}")
+                    mCallback?.get()?.onMessage("[$date]收到来自${sName}(${sId})的消息:${message}")
                     val msg: String = message.toString()
                     val pattern: Pattern  = Pattern.compile("群内回复[a-zA-Z0-9 \\u0080-\\u9fff](.+)[a-zA-Z0-9 \\u0080-\\u9fff]进行报名")
                     val matcher: Matcher  = pattern.matcher(msg)

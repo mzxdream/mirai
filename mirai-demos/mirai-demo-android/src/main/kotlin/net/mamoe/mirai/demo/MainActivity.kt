@@ -12,6 +12,7 @@ import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.IBinder
+import android.text.method.ScrollingMovementMethod
 import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
@@ -25,6 +26,7 @@ class MainActivity : AppCompatActivity(),LoginCallback {
 
 
     private lateinit var progressDialog : ProgressDialog
+    private val msgList = mutableListOf<String>()
 
     override suspend fun onCaptcha(bitmap: Bitmap) {
         withContext(Dispatchers.Main){
@@ -40,7 +42,15 @@ class MainActivity : AppCompatActivity(),LoginCallback {
     @SuppressLint("SetTextI18n")
     override suspend fun onMessage(message:String) {
         withContext(Dispatchers.Main){
-            msg.text = "${msg.text}\n$message"
+            msgList.add(message)
+            while (msgList.size > 100) {
+                msgList.removeAt(0)
+            }
+            var content = String()
+            for (i in 0 until msgList.size) {
+                content = msgList[i] + "\n" + content
+            }
+            msg.text = "开始抢饭中...\n${content}"
         }
     }
 
@@ -54,7 +64,8 @@ class MainActivity : AppCompatActivity(),LoginCallback {
             et_pwd.visibility = View.GONE
             et_qq.visibility = View.GONE
             bt_login.visibility = View.GONE
-            onMessage("开始抢饭中...")
+            msg.text = "开始抢饭中..."
+            msgList.clear()
         }
 
     }
@@ -93,6 +104,7 @@ class MainActivity : AppCompatActivity(),LoginCallback {
         startService(intent)
         bindService(intent, conn, Service.BIND_AUTO_CREATE)
         progressDialog = ProgressDialog(this)
+        msg.movementMethod = ScrollingMovementMethod.getInstance()
         bt_login.setOnClickListener {
             if (!progressDialog.isShowing){
                 progressDialog.show()
@@ -111,7 +123,6 @@ class MainActivity : AppCompatActivity(),LoginCallback {
                 val captcha = et_captcha.text.toString()
                 binder?.setCaptcha(captcha)
             }
-
         }
     }
 
