@@ -55,6 +55,8 @@ internal object MemberMuteEventPacketParserAndHandler : KnownEventParserAndHandl
         // 76 E4 B8 DD
         // 00 27 8D 00
 
+        val buf = copy()
+        bot.logger.debug("11111111:${buf.remaining}|${buf.readBytes().toUHexString()}")
         discardExact(3)
         return when (val flag = readByte().toUInt()) {
             0x0Eu -> {

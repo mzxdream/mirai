@@ -179,35 +179,35 @@ class MessageSubscribersBuilder<T : MessagePacket<*, *>>(
      */
     @MessageDsl
     inline fun sentBy(qqId: Long, crossinline onEvent: @MessageDsl suspend T.(String) -> Unit): Listener<T> =
-        content({ sender.id == qqId }, onEvent)
+        content({ sender?.id == qqId }, onEvent)
 
     /**
      * 如果是管理员或群主发的消息, 就执行 [onEvent]
      */
     @MessageDsl
     inline fun sentByOperator(crossinline onEvent: @MessageDsl suspend T.(String) -> Unit): Listener<T> =
-        content({ this is GroupMessage && sender.permission.isOperator() }, onEvent)
+        content({ this is GroupMessage &&  sender!!.permission.isOperator() }, onEvent)
 
     /**
      * 如果是管理员发的消息, 就执行 [onEvent]
      */
     @MessageDsl
     inline fun sentByAdministrator(crossinline onEvent: @MessageDsl suspend T.(String) -> Unit): Listener<T> =
-        content({ this is GroupMessage && sender.permission.isAdministrator() }, onEvent)
+        content({ this is GroupMessage && sender!!.permission.isAdministrator() }, onEvent)
 
     /**
      * 如果是群主发的消息, 就执行 [onEvent]
      */
     @MessageDsl
     inline fun sentByOwner(crossinline onEvent: @MessageDsl suspend T.(String) -> Unit): Listener<T> =
-        content({ this is GroupMessage && sender.permission.isOwner() }, onEvent)
+        content({ this is GroupMessage && sender!!.permission.isOwner() }, onEvent)
 
     /**
      * 如果是来自这个群的消息, 就执行 [onEvent]
      */
     @MessageDsl
     inline fun sentFrom(id: Long, crossinline onEvent: @MessageDsl suspend T.(String) -> Unit): Listener<T> =
-        content({ if (this is GroupMessage) group.id == id else false }, onEvent)
+        content({ if (this is GroupMessage) group!!.id == id else false }, onEvent)
 
     /**
      * 如果消息内容包含 [M] 类型的 [Message], 就执行 [onEvent]

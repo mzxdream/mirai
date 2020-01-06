@@ -2,6 +2,7 @@ package net.mamoe.mirai.timpc.network.packet.event
 
 import kotlinx.io.core.ByteReadPacket
 import kotlinx.io.core.discardExact
+import kotlinx.io.core.readBytes
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.contact.MemberPermission
 import net.mamoe.mirai.message.GroupMessage
@@ -10,13 +11,17 @@ import net.mamoe.mirai.message.FriendMessage
 import net.mamoe.mirai.utils.PacketVersion
 import net.mamoe.mirai.utils.MiraiLogger
 import net.mamoe.mirai.utils.io.*
-
+import net.mamoe.mirai.contact.*
+import net.mamoe.mirai.timpc.internal.RawGroupInfo
+import net.mamoe.mirai.utils.LockFreeLinkedList
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
 internal object GroupMessageEventParserAndHandler : KnownEventParserAndHandler<GroupMessage>(0x0052u) {
 
     @PacketVersion(date = "2019.11.2", timVersion = "2.3.2 (21173)")
     override suspend fun ByteReadPacket.parse(bot: Bot, identity: EventPacketIdentity): GroupMessage {
+        val buf = copy()
+        bot.logger.debug("-----------------message:${buf.remaining}|${buf.readBytes().toUHexString()}")
         discardExact(31)
         val groupNumber = readGroup()
         discardExact(1)
@@ -57,16 +62,32 @@ internal object GroupMessageEventParserAndHandler : KnownEventParserAndHandler<G
                 }
             }
         }
-
-        val group = bot.getGroup(groupNumber)
-        return GroupMessage(
-            bot = bot,
-            group = group,
-            senderName = senderName,
-            permission = senderPermission,
-            sender = group.getMember(qq),
-            message = message
-        )
+        bot.logger.debug("-----------------detail:${groupNumber} $senderName ${senderPermission.name}:$message")
+        try {
+            //val group = bot.getGroup(groupNumber)
+            return GroupMessage(
+                bot = bot,
+                groupNumber = groupNumber,
+                group = null,
+                senderName = senderName,
+                permission = senderPermission,
+                senderId = qq,
+                sender = null,
+                message = message
+            )
+        } catch (e: Exception) {
+            bot.logger.warning(e)
+            return GroupMessage(
+                bot = bot,
+                groupNumber = groupNumber,
+                group = null,
+                senderName = senderName,
+                permission = senderPermission,
+                senderId = qq,
+                sender = null,
+                message = message
+            )
+        }
     }
 }
 

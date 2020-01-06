@@ -6,17 +6,20 @@ import android.annotation.SuppressLint
 import android.app.ProgressDialog
 import android.app.Service
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.os.IBinder
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.lang.Exception
 
 class MainActivity : AppCompatActivity(),LoginCallback {
 
@@ -51,6 +54,7 @@ class MainActivity : AppCompatActivity(),LoginCallback {
             et_pwd.visibility = View.GONE
             et_qq.visibility = View.GONE
             bt_login.visibility = View.GONE
+            onMessage("开始抢饭中...")
         }
 
     }
@@ -93,11 +97,16 @@ class MainActivity : AppCompatActivity(),LoginCallback {
             if (!progressDialog.isShowing){
                 progressDialog.show()
             }
+            (this.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(this.window.decorView.windowToken, 0)
             binder?.setCallback(this)
             if (!needCaptcha){
-                val qq = et_qq.text.toString().toLong()
-                val pwd = et_pwd.text.toString()
-                binder?.startLogin(qq, pwd)
+                try {
+                    val qq = et_qq.text.toString().toLong()
+                    val pwd = et_pwd.text.toString()
+                    binder?.startLogin(qq, pwd)
+                } catch (e : Exception) {
+                    Toast.makeText(this@MainActivity, e.toString(), Toast.LENGTH_SHORT).show()
+                }
             }else{
                 val captcha = et_captcha.text.toString()
                 binder?.setCaptcha(captcha)

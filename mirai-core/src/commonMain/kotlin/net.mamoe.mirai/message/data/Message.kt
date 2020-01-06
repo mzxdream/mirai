@@ -105,4 +105,4 @@ interface SingleOnly : Message
 /**
  * 将 [this] 发送给指定联系人
  */
-suspend inline fun Message.sendTo(contact: Contact) = contact.sendMessage(this)
+suspend inline fun Message.sendTo(contact: Contact?) = contact?.sendMessage(this)

@@ -31,12 +31,12 @@ abstract class MessagePacketBase<TSender : QQ, TSubject : Contact>(_bot: Bot) : 
      *
      * 在回复消息时, 可通过 [subject] 作为回复对象
      */
-    abstract val subject: TSubject
+    abstract val subject: TSubject?
 
     /**
      * 发送人
      */
-    abstract val sender: TSender
+    abstract val sender: TSender?
 
     abstract val message: MessageChain
 
@@ -48,10 +48,10 @@ abstract class MessagePacketBase<TSender : QQ, TSubject : Contact>(_bot: Bot) : 
      * 对于好友消息事件, 这个方法将会给好友 ([subject]) 发送消息
      * 对于群消息事件, 这个方法将会给群 ([subject]) 发送消息
      */
-    suspend inline fun reply(message: MessageChain) = subject.sendMessage(message)
+    suspend inline fun reply(message: MessageChain) = subject?.sendMessage(message)
 
-    suspend inline fun reply(message: Message) = subject.sendMessage(message.chain())
-    suspend inline fun reply(plain: String) = subject.sendMessage(plain.toMessage())
+    suspend inline fun reply(message: Message) = subject?.sendMessage(message.chain())
+    suspend inline fun reply(plain: String) = subject?.sendMessage(plain.toMessage())
 
     @JvmName("reply1")
     suspend inline fun String.reply() = reply(this)

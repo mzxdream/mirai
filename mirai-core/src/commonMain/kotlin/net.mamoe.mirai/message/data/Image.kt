@@ -70,4 +70,4 @@ fun ImageId.requireLength() = require(value.length == 37 || value.length == 42) 
 inline fun ImageId.image(): Image =
     Image(this)
 
-suspend inline fun ImageId.sendTo(contact: Contact) = contact.sendMessage(this.image())
+suspend inline fun ImageId.sendTo(contact: Contact?) = contact?.sendMessage(this.image())

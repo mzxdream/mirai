@@ -66,17 +66,17 @@ suspend fun main() {
     // 订阅来自这个 bot 的群消息事件
     bot.subscribeGroupMessages {
         "群资料" reply {
-            group.updateGroupInfo().toString().reply()
+            group?.updateGroupInfo().toString().reply()
         }
 
         startsWith("mute") {
             val at: At by message
-            at.member().mute(30)
+            at.member()?.mute(30)
         }
 
         startsWith("unmute") {
             val at: At by message
-            at.member().unmute()
+            at.member()?.unmute()
         }
     }
 
@@ -85,7 +85,7 @@ suspend fun main() {
         always {
         }
 
-        case("at me") { At(sender).reply() }
+        case("at me") { At(sender!!).reply() }
         // 等同于  "at me" reply { At(sender) }
 
         "你好" reply "你好!"
@@ -95,7 +95,7 @@ suspend fun main() {
             if (account.isNotEmpty()) {
                 account.toLong().qq()
             } else {
-                sender
+                sender!!
             }.queryProfile().toString().reply()
         }
         "grouplist" reply {
@@ -169,7 +169,7 @@ suspend fun main() {
             repeat(it.toIntOrNull() ?: 1) {
                 GlobalScope.launch {
                     delay(Random.Default.nextLong(100, 1000))
-                    Gentlemen.provide(subject).receive().image.await().send()
+                    Gentlemen.provide(subject!!).receive().image.await().send()
                 }
             }
         }

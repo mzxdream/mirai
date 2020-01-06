@@ -26,17 +26,17 @@ import javax.imageio.ImageIO
  */
 @UseExperimental(MiraiInternalAPI::class)
 actual abstract class MessagePacket<TSender : QQ, TSubject : Contact> actual constructor(bot: Bot) : MessagePacketBase<TSender, TSubject>(bot) {
-    suspend inline fun uploadImage(image: BufferedImage): Image = subject.uploadImage(image)
-    suspend inline fun uploadImage(image: URL): Image = subject.uploadImage(image)
-    suspend inline fun uploadImage(image: Input): Image = subject.uploadImage(image)
-    suspend inline fun uploadImage(image: InputStream): Image = subject.uploadImage(image)
-    suspend inline fun uploadImage(image: File): Image = subject.uploadImage(image)
+    suspend inline fun uploadImage(image: BufferedImage): Image? = subject?.uploadImage(image)
+    suspend inline fun uploadImage(image: URL): Image? = subject?.uploadImage(image)
+    suspend inline fun uploadImage(image: Input): Image? = subject?.uploadImage(image)
+    suspend inline fun uploadImage(image: InputStream): Image? = subject?.uploadImage(image)
+    suspend inline fun uploadImage(image: File): Image? = subject?.uploadImage(image)
 
-    suspend inline fun sendImage(image: BufferedImage) = subject.sendImage(image)
-    suspend inline fun sendImage(image: URL) = subject.sendImage(image)
-    suspend inline fun sendImage(image: Input) = subject.sendImage(image)
-    suspend inline fun sendImage(image: InputStream) = subject.sendImage(image)
-    suspend inline fun sendImage(image: File) = subject.sendImage(image)
+    suspend inline fun sendImage(image: BufferedImage) = subject?.sendImage(image)
+    suspend inline fun sendImage(image: URL) = subject?.sendImage(image)
+    suspend inline fun sendImage(image: Input) = subject?.sendImage(image)
+    suspend inline fun sendImage(image: InputStream) = subject?.sendImage(image)
+    suspend inline fun sendImage(image: File) = subject?.sendImage(image)
 
     suspend inline fun BufferedImage.upload(): Image = upload(subject)
     suspend inline fun URL.uploadAsImage(): Image = uploadAsImage(subject)

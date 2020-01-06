@@ -64,7 +64,7 @@ class ExternalImage(
 /**
  * 将图片发送给指定联系人
  */
-suspend fun ExternalImage.sendTo(contact: Contact) = when (contact) {
+suspend fun ExternalImage.sendTo(contact: Contact?) = when (contact) {
     is Group -> contact.uploadImage(this).sendTo(contact)
     is QQ -> contact.uploadImage(this).sendTo(contact)
     else -> assertUnreachable()
@@ -76,7 +76,7 @@ suspend fun ExternalImage.sendTo(contact: Contact) = when (contact) {
  *
  * @see contact 图片上传对象. 由于好友图片与群图片不通用, 上传时必须提供目标联系人
  */
-suspend fun ExternalImage.upload(contact: Contact): Image = when (contact) {
+suspend fun ExternalImage.upload(contact: Contact?): Image = when (contact) {
     is Group -> contact.uploadImage(this).image()
     is QQ -> contact.uploadImage(this).image()
     else -> assertUnreachable()

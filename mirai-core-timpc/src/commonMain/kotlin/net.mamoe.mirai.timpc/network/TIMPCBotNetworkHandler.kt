@@ -155,6 +155,8 @@ internal class TIMPCBotNetworkHandler internal constructor(coroutineContext: Cor
                     }
                     ByteReadPacket(buffer, IoBuffer.Pool).use { input ->
                         try {
+                            val buf = input.copy()
+                            bot.logger.warning("00000000:${buf.remaining}|${buf.readBytes().toUHexString()}")
                             input.discardExact(3)
 
                             val id = matchPacketId(input.readUShort())
