@@ -133,19 +133,8 @@ internal abstract class TIMPCBotBase constructor(
 
     @UseExperimental(MiraiInternalAPI::class, ExperimentalUnsignedTypes::class)
     final override suspend fun getGroup(id: GroupId): Group = groups.delegate.getOrNull(id.value) ?: inline {
-        val info: RawGroupInfo = try {
-            when (val response =
-                GroupPacket.QueryGroupInfo(qqAccount, id.toInternalId(), sessionKey).sendAndExpect<GroupPacket.InfoResponse>()) {
-                is RawGroupInfo -> response
-                is GroupNotFound -> throw GroupNotFoundException("id=${id.value}")
-                else -> assertUnreachable()
-            }
-        } catch (e: Exception) {
-            //throw IllegalStateException("Cannot obtain group info for id ${id.value}", e)
-            val members = mutableMapOf<Long, MemberPermission>()
-            RawGroupInfo(id.value, id.value, "${id.value}", "${id.value}", members)
-        }
-
+        val members = mutableMapOf<Long, MemberPermission>()
+        val info = RawGroupInfo(id.value, id.value, "${id.value}", "${id.value}", members)
         return groups.delegate.getOrAdd(id.value) { Group(id, info) }
     }
 
@@ -155,7 +144,8 @@ internal abstract class TIMPCBotBase constructor(
     private suspend inline fun getGroup0(id: Long): Group =
         groups.delegate.getOrNull(id) ?: inline {
             val info: RawGroupInfo = try {
-                GroupPacket.QueryGroupInfo(qqAccount, GroupId(id).toInternalId(), sessionKey).sendAndExpect()
+                val members = mutableMapOf<Long, MemberPermission>()
+                RawGroupInfo(id, id, "$id", "$id", members)
             } catch (e: Exception) {
                 e.logStacktrace()
                 error("Cannot obtain group info for id $id")
